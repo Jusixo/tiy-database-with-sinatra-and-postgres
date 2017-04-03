@@ -57,7 +57,6 @@
   					Employees
   				</div>
     				<table class="table">
-    					<% @accounts.each do |person| %>
     					<tr>
     						<th class="info">Name</th>
     						<th class="info">Address</th>
@@ -65,26 +64,25 @@
     					</tr>
     					<tr>
     						<td rowspan="5"><a href="/employee?name=<%= person["name"] %>"><%= person["name"] %></a></td>
-    						<td><%= person["address"] %></td>
-    						<td><%= person["phone"] %></td>
+    						<td><%= @person["address"] %></td>
+    						<td><%= @person["phone"] %></td>
     					</tr>
     					<tr>
     						<th class="info">Position</th>
     						<th class="info">Salary</th>
     					</tr>
     					<tr>
-    						<td><%= person["position"] %></td>
-    						<td>$<%= person["salary"] %></td>
+    						<td><%= @person["position"] %></td>
+    						<td>$<%= @person["salary"] %></td>
     					</tr>
     					<tr>
     						<th class="info">Slack</th>
     						<th class="info">Github</th>
     					</tr>
     					<tr>
-    						<td><%= person["slack"] %></td>
-    						<td><%= person["github"] %></td>
+    						<td><%= @person["slack"] %></td>
+    						<td><%= @person["github"] %></td>
     					</tr>
-    					<% end %>
     				</table>
   			</div>
       </div>
