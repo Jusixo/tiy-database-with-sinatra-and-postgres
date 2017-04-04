@@ -1,89 +1,94 @@
 require 'sinatra'
 require 'pg'
 require 'sinatra/reloader' if development?
+require 'active_record'
+
+ActiveRecord::Base.logger = Logger.new(STDOUT)
+ActiveRecord::Base.establish_connection(
+  adapter: "postgresql",
+  database: "tiy-database"
+)
+
+class Employee < ActiveRecord::Base
+  validates :name, presence: true
+  validates :position, inclusion: { in: %w{Instructor Student}, message: "%{value} must be Instructor or Student" }
+
+  self.primary_key = "id"
+end
+
+after do
+  ActiveRecord::Base.connection.close
+end
 
 get '/' do
   erb :home
 end
 
 get '/employees' do
-  database = PG.connect(dbname: "tiy-database")
-  @accounts = database.exec("SELECT * FROM employees")
+  @employees = Employee.all
 
   erb :employees
 end
 
-get '/employee' do
-  select_employee = params["name"]
-
-  database = PG.connect(dbname: "tiy-database")
-  @people = database.exec("SELECT * FROM employees WHERE name = $1", [select_employee])
-
-  erb :employee_page
+get '/employee_show' do
+  @employee = Employee.find(params["id"])
+  if @employee
+    erb :employee_show
+  else
+    erb :no_employee_found
+  end
 end
 
-get '/new_employee' do
-  erb :new_employee
+get '/new' do
+  @employee = Employee.new
+
+  erb :new
 end
 
-get '/create_employee' do
-  name = params["name"]
-  phone = params["phone"]
-  address = params["address"]
-  position = params["position"]
-  salary.to_i = params["salary"]
-  slack = params["slack"]
-  github = params["guthub"]
-
-  database = PG.connect(dbname: "tiy-database")
-  @accounts = database.exec("INSERT INTO employees(name, phone, address, position, salary, github, slack) VALUES($1, $2, $3, $4, $5, $6, $7)", [name, phone, address, position, salary, github, slack])
-
-  redirect to("/")
+get '/new_employees' do
+  @employee = Employee.create(params)
+  if @employee.valid?
+    redirect('/')
+  else
+    erb :new_employees
+  end
 end
 
-get '/search_results' do
-  which_employee = params["search_param"]
+get '/search' do
+  search = params["search"]
 
-  database = PG.connect(dbname: "tiy-database")
-  @people = database.exec("SELECT * FROM employees WHERE name = $1 OR github = $1 OR slack = $1 OR name LIKE $1", ["%#{which_employee}%"])
+  @employees = Employee.where("name like ? or github = ? or slack = ?", "%#{search}%", search, search)
 
-  erb :employee
+  erb :search
 end
 
 get '/edit_employee' do
-  id = params["id"]
-
   database = PG.connect(dbname: "tiy-database")
-  people = database.exec("SELECT * FROM employees WHERE id = $1", [id])
 
-  @person = people.first
+  @employee = Employee.find(params["id"])
 
   erb :edit_employee
 end
 
-get '/update_employee' do
-  name = params["name"]
-  phone = params["phone"]
-  address = params["address"]
-  position = params["position"]
-  salary.to_i = params["salary"]
-  github = params["github"]
-  slack = params["slack"]
-  id = params["id"]
-
+get '/update' do
   database = PG.connect(dbname: "tiy-database")
 
-  @people = database.exec("UPDATE employees SET name = $1, phone = $2, address = $3, position = $4, salary = $5, github = $6, slack = $7 WHERE id = $8", [name, phone, address, position, salary, github, slack, id])
+  @employee = Employee.find(params["id"])
+  @employee.update_attributes(params)
 
-  redirect to("/employees")
+  if @employee.valid?
+    redirect to("/employee_show?id=#{@employee.id}")
+  else
+    erb :edit
+  end
 end
 
-get '/delete_employee' do
-  id = params["id"]
-
+get '/delete' do
   database = PG.connect(dbname: "tiy-database")
 
-  @people = database.exec("DELETE FROM employees WHERE id = $1", [id])
+  @employee = Employee.find(params["id"])
 
-  redirect to("/employees")
+  @employee.destroy
+
+  redirect('/employees')
 end
